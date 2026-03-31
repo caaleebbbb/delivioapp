@@ -54,12 +54,15 @@ export default function RestaurantPage() {
     <RoleAuthPage role="restaurant">
       <div className="max-w-[1180px] mx-auto px-4 md:px-5">
         <header className="flex justify-between items-center gap-4 py-5 pb-10">
-          <a href="/">
-            <h1 className="text-2xl font-extrabold flex gap-1">
-              <span className="text-primary">Deli</span>
-              <span className="text-secondary">vio</span>
-            </h1>
-            <p className="text-muted-foreground text-xs">Restaurant Portal</p>
+          <a href="/" className="flex items-center gap-2">
+            <img src={delivioLogo} alt="Delivio" className="w-8 h-8 md:w-10 md:h-10 object-contain" />
+            <div>
+              <h1 className="text-2xl font-extrabold flex gap-1">
+                <span className="text-primary">Deli</span>
+                <span className="text-secondary">vio</span>
+              </h1>
+              <p className="text-muted-foreground text-xs">Restaurant Portal</p>
+            </div>
           </a>
           <span className="px-3 py-1 rounded-full bg-primary/15 text-primary text-xs font-extrabold">Restaurant</span>
         </header>
