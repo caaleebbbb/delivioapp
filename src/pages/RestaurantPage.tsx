@@ -5,6 +5,7 @@ import MenuEditor from "@/components/MenuEditor";
 import RestaurantOrders from "@/components/RestaurantOrders";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import delivioLogo from "@/assets/delivio-logo.png";
 
 function RestaurantDashboard() {
   const { profile, signOut } = useAuth();
