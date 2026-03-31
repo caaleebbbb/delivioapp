@@ -393,9 +393,13 @@ export default function CustomerDashboard() {
 
         {/* Restaurant header */}
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-2xl">
-            {rest?.business_name?.charAt(0) || "R"}
-          </div>
+          {getRestaurantLogo(rest?.business_name || "") ? (
+            <img src={getRestaurantLogo(rest?.business_name || "")} alt={rest?.business_name || ""} className="w-16 h-16 rounded-2xl object-cover" />
+          ) : (
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-2xl">
+              {rest?.business_name?.charAt(0) || "R"}
+            </div>
+          )}
           <div>
             <h2 className="text-xl md:text-2xl font-extrabold">{rest?.business_name}</h2>
             <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
