@@ -1,0 +1,25 @@
+import { useAuth } from "@/hooks/useAuth";
+import RoleAuthPage from "@/components/RoleAuthPage";
+import DriverDashboard from "@/components/DriverDashboard";
+
+export default function DriverPage() {
+  const { signOut } = useAuth();
+
+  return (
+    <RoleAuthPage role="driver">
+      <div className="max-w-[1180px] mx-auto p-5">
+        <header className="flex justify-between items-center gap-4 py-5 pb-10">
+          <a href="/">
+            <h1 className="text-2xl font-extrabold flex gap-1">
+              <span className="text-primary">Deli</span>
+              <span className="text-secondary">vio</span>
+            </h1>
+            <p className="text-muted-foreground text-xs">Driver Portal</p>
+          </a>
+          <span className="px-3 py-1 rounded-full bg-secondary/15 text-secondary text-xs font-extrabold">Driver</span>
+        </header>
+        <DriverDashboard onLogout={signOut} />
+      </div>
+    </RoleAuthPage>
+  );
+}

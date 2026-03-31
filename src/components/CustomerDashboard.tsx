@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,19 +30,6 @@ interface CartItem {
   lineTotal: number;
 }
 
-interface Order {
-  id: string;
-  restaurant_name: string;
-  status: string;
-  total: number;
-  created_at: string;
-  driver_name: string;
-}
-
-function formatDate(ts: string) {
-  return new Date(ts).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-}
-
 const STATUS_COLORS: Record<string, string> = {
   placed: "bg-blue-500/15 text-blue-300",
   preparing: "bg-secondary/15 text-secondary",
@@ -52,14 +38,17 @@ const STATUS_COLORS: Record<string, string> = {
   delivered: "bg-muted text-muted-foreground",
 };
 
-export default function CustomerDashboard({ onLogout }: { onLogout: () => void }) {
-  const { profile } = useAuth();
+function formatDate(ts: string) {
+  return new Date(ts).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+export default function CustomerDashboard() {
   const [restaurants, setRestaurants] = useState<Profile[]>([]);
   const [selectedRestaurantId, setSelectedRestaurantId] = useState("");
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [address, setAddress] = useState("123 Campus Way, Baltimore, MD");
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [address, setAddress] = useState("");
+  const [customerName, setCustomerName] = useState("");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -82,26 +71,6 @@ export default function CustomerDashboard({ onLogout }: { onLogout: () => void }
       .eq("is_available", true)
       .then(({ data }) => { if (data) setMenuItems(data); });
   }, [selectedRestaurantId]);
-
-  const fetchOrders = async () => {
-    if (!profile) return;
-    const { data } = await supabase
-      .from("orders")
-      .select("*")
-      .eq("customer_id", profile.id)
-      .order("created_at", { ascending: false });
-    if (data) setOrders(data as Order[]);
-  };
-
-  useEffect(() => {
-    fetchOrders();
-    const channel = supabase.channel("customer-orders").on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "orders" },
-      () => fetchOrders()
-    ).subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [profile]);
 
   const addToCart = (item: MenuItem) => {
     setCart((prev) => {
@@ -129,15 +98,14 @@ export default function CustomerDashboard({ onLogout }: { onLogout: () => void }
   const cartTotal = useMemo(() => cart.reduce((s, c) => s + c.lineTotal, 0), [cart]);
 
   const placeOrder = async () => {
-    if (!profile || !selectedRestaurantId || cart.length === 0 || !address.trim()) return;
+    if (!selectedRestaurantId || cart.length === 0 || !address.trim() || !customerName.trim()) return;
     const rest = restaurants.find((r) => r.id === selectedRestaurantId);
     if (!rest) return;
 
     const { data: order, error } = await supabase
       .from("orders")
       .insert({
-        customer_id: profile.id,
-        customer_name: profile.full_name || "Customer",
+        customer_name: customerName.trim(),
         restaurant_id: selectedRestaurantId,
         restaurant_name: rest.business_name || "Restaurant",
         address: address.trim(),
@@ -147,7 +115,10 @@ export default function CustomerDashboard({ onLogout }: { onLogout: () => void }
       .select()
       .single();
 
-    if (error || !order) return;
+    if (error || !order) {
+      setMessage("Could not place order. Please try again.");
+      return;
+    }
 
     await supabase.from("order_items").insert(
       cart.map((c) => ({
@@ -161,18 +132,14 @@ export default function CustomerDashboard({ onLogout }: { onLogout: () => void }
     );
 
     setCart([]);
-    setMessage("Order placed successfully!");
-    fetchOrders();
+    setMessage("Order placed successfully! 🎉");
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h2 className="text-3xl font-extrabold">Customer Ordering</h2>
-          <p className="text-muted-foreground">Browse restaurants, build a cart, and track your orders.</p>
-        </div>
-        <Button variant="outline" onClick={onLogout}>Log Out</Button>
+      <div>
+        <h2 className="text-3xl font-extrabold">Order Food</h2>
+        <p className="text-muted-foreground">Browse restaurants and place your order — no account needed.</p>
       </div>
 
       {message && (
@@ -199,7 +166,9 @@ export default function CustomerDashboard({ onLogout }: { onLogout: () => void }
           </Card>
 
           {menuItems.length === 0 ? (
-            <Card><CardContent className="py-8 text-center text-muted-foreground">No available items yet.</CardContent></Card>
+            <Card><CardContent className="py-8 text-center text-muted-foreground">
+              {restaurants.length === 0 ? "No restaurants available yet." : "No available items from this restaurant."}
+            </CardContent></Card>
           ) : (
             <div className="grid gap-4">
               {menuItems.map((item) => (
@@ -218,7 +187,7 @@ export default function CustomerDashboard({ onLogout }: { onLogout: () => void }
           )}
         </div>
 
-        {/* Right - Cart & Orders */}
+        {/* Right - Cart */}
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -248,9 +217,15 @@ export default function CustomerDashboard({ onLogout }: { onLogout: () => void }
                 </div>
               )}
 
-              <div className="space-y-2 mt-4">
-                <Label>Delivery Address</Label>
-                <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Enter your address" />
+              <div className="space-y-3 mt-4">
+                <div className="space-y-2">
+                  <Label>Your Name</Label>
+                  <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Enter your name" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Delivery Address</Label>
+                  <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Enter your address" />
+                </div>
               </div>
 
               <div className="flex justify-between items-center mt-4 pt-4 border-t border-border">
@@ -258,36 +233,9 @@ export default function CustomerDashboard({ onLogout }: { onLogout: () => void }
                 <span className="font-extrabold text-lg">${cartTotal.toFixed(2)}</span>
               </div>
 
-              <Button variant="warning" className="w-full mt-4" disabled={cart.length === 0} onClick={placeOrder}>
+              <Button variant="warning" className="w-full mt-4" disabled={cart.length === 0 || !customerName.trim() || !address.trim()} onClick={placeOrder}>
                 Place Order
               </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle>Recent Orders</CardTitle>
-                <span className="text-muted-foreground text-sm">{orders.length}</span>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {orders.length === 0 ? (
-                <p className="text-muted-foreground text-sm">No orders yet.</p>
-              ) : (
-                <div className="space-y-3">
-                  {orders.map((order) => (
-                    <div key={order.id} className="p-3 rounded-lg border border-border bg-muted/30">
-                      <div className="flex justify-between items-center gap-3">
-                        <span className="font-bold">{order.restaurant_name}</span>
-                        <Badge className={`${STATUS_COLORS[order.status] || ""} border-0`}>{order.status.replace(/-/g, " ")}</Badge>
-                      </div>
-                      <p className="text-muted-foreground text-sm mt-2">{formatDate(order.created_at)} • ${order.total.toFixed(2)}</p>
-                      {order.driver_name && <p className="text-sm mt-1">Driver: {order.driver_name}</p>}
-                    </div>
-                  ))}
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>
