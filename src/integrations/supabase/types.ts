@@ -109,6 +109,8 @@ export type Database = {
           driver_id: string | null
           driver_name: string | null
           id: string
+          offer_expires_at: string | null
+          offered_to_driver_id: string | null
           restaurant_id: string
           restaurant_name: string
           status: string
@@ -123,6 +125,8 @@ export type Database = {
           driver_id?: string | null
           driver_name?: string | null
           id?: string
+          offer_expires_at?: string | null
+          offered_to_driver_id?: string | null
           restaurant_id: string
           restaurant_name: string
           status?: string
@@ -137,6 +141,8 @@ export type Database = {
           driver_id?: string | null
           driver_name?: string | null
           id?: string
+          offer_expires_at?: string | null
+          offered_to_driver_id?: string | null
           restaurant_id?: string
           restaurant_name?: string
           status?: string
@@ -159,6 +165,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "orders_offered_to_driver_id_fkey"
+            columns: ["offered_to_driver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "orders_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
@@ -173,6 +186,7 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          is_available: boolean
           role: Database["public"]["Enums"]["app_role"]
           updated_at: string
           user_id: string
@@ -183,6 +197,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          is_available?: boolean
           role: Database["public"]["Enums"]["app_role"]
           updated_at?: string
           user_id: string
@@ -193,6 +208,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          is_available?: boolean
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string
           user_id?: string
