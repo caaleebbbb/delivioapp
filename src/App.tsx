@@ -4,8 +4,12 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
-import Index from "./pages/Index.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import HomePage from "./pages/HomePage";
+import OrderPage from "./pages/OrderPage";
+import RestaurantPage from "./pages/RestaurantPage";
+import DriverPage from "./pages/DriverPage";
+import AdminPage from "./pages/AdminPage";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
@@ -17,7 +21,11 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={<HomePage />} />
+            <Route path="/order" element={<OrderPage />} />
+            <Route path="/restaurant" element={<RestaurantPage />} />
+            <Route path="/driver" element={<DriverPage />} />
+            <Route path="/admin" element={<AdminPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
