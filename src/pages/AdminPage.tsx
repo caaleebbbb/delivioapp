@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import RoleAuthPage from "@/components/RoleAuthPage";
 import AdminDashboard from "@/components/AdminDashboard";
+import delivioLogo from "@/assets/delivio-logo.png";
 
 export default function AdminPage() {
   const { signOut } = useAuth();
