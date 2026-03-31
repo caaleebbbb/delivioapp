@@ -614,9 +614,13 @@ export default function CustomerDashboard() {
             className="overflow-hidden cursor-pointer hover:border-primary/40 transition-all group"
             onClick={() => { setSelectedRestaurantId(rest.id); setView("restaurant"); setCart([]); setActiveCategory(null); setSearchQuery(""); }}
           >
-            {/* Restaurant header image - gradient placeholder */}
-            <div className="h-32 bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
-              <span className="text-5xl opacity-50">{rest.business_name?.charAt(0)}</span>
+            {/* Restaurant header image */}
+            <div className="h-32 bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center overflow-hidden">
+              {getRestaurantLogo(rest.business_name || "") ? (
+                <img src={getRestaurantLogo(rest.business_name || "")} alt={rest.business_name || ""} className="w-20 h-20 object-contain" loading="lazy" />
+              ) : (
+                <span className="text-5xl opacity-50">{rest.business_name?.charAt(0)}</span>
+              )}
             </div>
             <CardContent className="pt-3 pb-4">
               <h4 className="font-bold group-hover:text-primary transition-colors">{rest.business_name}</h4>
