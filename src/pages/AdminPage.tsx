@@ -7,7 +7,7 @@ export default function AdminPage() {
 
   return (
     <RoleAuthPage role="admin">
-      <div className="max-w-[1180px] mx-auto p-5">
+      <div className="max-w-[1180px] mx-auto px-4 md:px-5">
         <header className="flex justify-between items-center gap-4 py-5 pb-10">
           <a href="/">
             <h1 className="text-2xl font-extrabold flex gap-1">
