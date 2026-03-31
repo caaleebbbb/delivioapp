@@ -23,7 +23,7 @@ function RestaurantDashboard() {
         <CardContent className="pt-6">
           <h2 className="text-3xl font-extrabold mb-2">Welcome back, {profile?.business_name}!</h2>
           <p className="text-muted-foreground mb-6">Manage your restaurant</p>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Button onClick={() => setView("menu-editor")} className="w-full">Open Menu Editor</Button>
             <Button variant="warning" onClick={() => setView("orders")} className="w-full">View Orders</Button>
             <Button variant="outline" onClick={handleLogout} className="w-full">Log Out</Button>
@@ -51,7 +51,7 @@ function RestaurantDashboard() {
 export default function RestaurantPage() {
   return (
     <RoleAuthPage role="restaurant">
-      <div className="max-w-[1180px] mx-auto p-5">
+      <div className="max-w-[1180px] mx-auto px-4 md:px-5">
         <header className="flex justify-between items-center gap-4 py-5 pb-10">
           <a href="/">
             <h1 className="text-2xl font-extrabold flex gap-1">
