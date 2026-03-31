@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import RoleAuthPage from "@/components/RoleAuthPage";
 import DriverDashboard from "@/components/DriverDashboard";
+import delivioLogo from "@/assets/delivio-logo.png";
 
 export default function DriverPage() {
   const { signOut } = useAuth();
