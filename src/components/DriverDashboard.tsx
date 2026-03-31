@@ -191,16 +191,12 @@ export default function DriverDashboard({ onLogout }: { onLogout: () => void }) 
   };
 
   const declineOrder = async () => {
-    if (!offeredOrder) return;
-    // Clear the offer so trigger can reassign
-    await supabase
-      .from("orders")
-      .update({
-        offered_to_driver_id: null,
-        offer_expires_at: null,
-      } as any)
-      .eq("id", offeredOrder.id);
+    if (!offeredOrder || !profile) return;
     setOfferedOrder(null);
+    // Call reassign edge function to find another driver
+    await supabase.functions.invoke("reassign-order", {
+      body: { order_id: offeredOrder.id, declined_driver_id: profile.id },
+    });
     fetchOrders();
   };
 
