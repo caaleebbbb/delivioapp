@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag, UtensilsCrossed, Truck, Shield } from "lucide-react";
+import delivioLogo from "@/assets/delivio-logo.png";
 
 const roles = [
   {
@@ -38,7 +39,8 @@ export default function HomePage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-2xl animate-fade-in">
-        <div className="text-center mb-10">
+        <div className="text-center mb-10 flex flex-col items-center">
+          <img src={delivioLogo} alt="Delivio" className="w-24 h-24 md:w-32 md:h-32 object-contain mb-2" />
           <h1 className="text-5xl font-extrabold flex items-center justify-center gap-1">
             <span className="text-primary">Deli</span>
             <span className="text-secondary">vio</span>

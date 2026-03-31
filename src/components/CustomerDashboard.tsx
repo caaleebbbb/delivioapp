@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getFoodImage } from "@/lib/foodImages";
+import { getRestaurantLogo } from "@/lib/restaurantLogos";
 import { ShoppingCart, Plus, Minus, Search, Clock, Star, MapPin, ChevronRight, User, LogOut, Package } from "lucide-react";
 
 interface Profile {
@@ -393,9 +394,13 @@ export default function CustomerDashboard() {
 
         {/* Restaurant header */}
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-2xl">
-            {rest?.business_name?.charAt(0) || "R"}
-          </div>
+          {getRestaurantLogo(rest?.business_name || "") ? (
+            <img src={getRestaurantLogo(rest?.business_name || "")} alt={rest?.business_name || ""} className="w-16 h-16 rounded-2xl object-cover" />
+          ) : (
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-2xl">
+              {rest?.business_name?.charAt(0) || "R"}
+            </div>
+          )}
           <div>
             <h2 className="text-xl md:text-2xl font-extrabold">{rest?.business_name}</h2>
             <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
@@ -610,9 +615,13 @@ export default function CustomerDashboard() {
             className="overflow-hidden cursor-pointer hover:border-primary/40 transition-all group"
             onClick={() => { setSelectedRestaurantId(rest.id); setView("restaurant"); setCart([]); setActiveCategory(null); setSearchQuery(""); }}
           >
-            {/* Restaurant header image - gradient placeholder */}
-            <div className="h-32 bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
-              <span className="text-5xl opacity-50">{rest.business_name?.charAt(0)}</span>
+            {/* Restaurant header image */}
+            <div className="h-32 bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center overflow-hidden">
+              {getRestaurantLogo(rest.business_name || "") ? (
+                <img src={getRestaurantLogo(rest.business_name || "")} alt={rest.business_name || ""} className="w-20 h-20 object-contain" loading="lazy" />
+              ) : (
+                <span className="text-5xl opacity-50">{rest.business_name?.charAt(0)}</span>
+              )}
             </div>
             <CardContent className="pt-3 pb-4">
               <h4 className="font-bold group-hover:text-primary transition-colors">{rest.business_name}</h4>
