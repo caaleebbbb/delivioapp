@@ -102,13 +102,9 @@ export default function CustomerDashboard() {
     const rest = restaurants.find((r) => r.id === selectedRestaurantId);
     if (!rest) return;
 
-    // Guest orders: we need a guest profile or use anon insert
-    // For simplicity, we'll insert directly using the restaurant's profile as a reference
-    // We need to handle this via a public insert approach
     const { data: order, error } = await supabase
       .from("orders")
       .insert({
-        customer_id: rest.id, // placeholder - will fix with proper guest flow
         customer_name: customerName.trim(),
         restaurant_id: selectedRestaurantId,
         restaurant_name: rest.business_name || "Restaurant",
