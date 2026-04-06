@@ -130,6 +130,15 @@ export default function DriverDashboard({ onLogout }: { onLogout: () => void }) 
   const [orders, setOrders] = useState<Order[]>([]);
   const [isAvailable, setIsAvailable] = useState(false);
   const [offeredOrder, setOfferedOrder] = useState<Order | null>(null);
+  const prevOfferedRef = useRef<string | null>(null);
+
+  // Play ding when a new order offer arrives
+  useEffect(() => {
+    if (offeredOrder && offeredOrder.id !== prevOfferedRef.current) {
+      playNotificationDing();
+    }
+    prevOfferedRef.current = offeredOrder?.id || null;
+  }, [offeredOrder]);
 
   const fetchOrders = useCallback(async () => {
     if (!profile) return;
