@@ -478,13 +478,21 @@ export default function CustomerDashboard() {
                       <div className="space-y-2">
                         {catItems.map((item) => {
                           const img = getFoodImage(item.name);
-                          const inCart = cart.find((c) => c.id === item.id);
+                          const hasVariants = !!getVariantGroup(item.name);
+                          // Only show inline qty stepper for plain items; variant items always reopen the picker.
+                          const inCart = !hasVariants ? cart.find((c) => c.id === item.id) : null;
+                          const variantCount = hasVariants
+                            ? cart.filter((c) => c.menuItemId === item.id).reduce((s, c) => s + c.quantity, 0)
+                            : 0;
                           return (
                             <Card key={item.id} className="overflow-hidden">
                               <div className="flex">
                                 <CardContent className="flex-1 py-3 space-y-1">
                                   <h4 className="font-bold text-sm">{item.name}</h4>
                                   {item.description && <p className="text-muted-foreground text-xs line-clamp-2">{item.description}</p>}
+                                  {hasVariants && (
+                                    <p className="text-secondary text-[11px] font-bold">Choose your {getVariantGroup(item.name)?.label.toLowerCase()}</p>
+                                  )}
                                   <div className="flex items-center justify-between pt-1">
                                     <span className="font-bold text-sm">${item.price.toFixed(2)}</span>
                                     {inCart ? (
@@ -494,8 +502,9 @@ export default function CustomerDashboard() {
                                         <button onClick={() => changeQty(item.id, 1)} className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center"><Plus className="w-3.5 h-3.5" /></button>
                                       </div>
                                     ) : (
-                                      <button onClick={() => addToCart(item)} className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/80">
-                                        <Plus className="w-4 h-4" />
+                                      <button onClick={() => addToCart(item)} className="flex items-center gap-1 px-2.5 h-7 rounded-full bg-primary text-primary-foreground hover:bg-primary/80 text-xs font-bold">
+                                        <Plus className="w-3.5 h-3.5" />
+                                        {hasVariants ? (variantCount > 0 ? `${variantCount} added` : "Choose") : ""}
                                       </button>
                                     )}
                                   </div>
