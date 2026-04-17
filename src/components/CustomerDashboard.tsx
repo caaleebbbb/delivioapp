@@ -225,7 +225,7 @@ export default function CustomerDashboard() {
     await supabase.from("order_items").insert(
       cart.map((c) => ({
         order_id: order.id,
-        menu_item_id: c.id,
+        menu_item_id: c.menuItemId,
         name: c.name,
         price: c.price,
         quantity: c.quantity,
