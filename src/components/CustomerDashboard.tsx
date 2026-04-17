@@ -155,18 +155,32 @@ export default function CustomerDashboard() {
     return items;
   }, [menuItems, activeCategory, searchQuery]);
 
-  const addToCart = (item: MenuItem) => {
+  const addItemToCart = (item: MenuItem, variant?: string) => {
+    const cartId = variant ? `${item.id}::${variant}` : item.id;
+    const displayName = variant ? `${item.name} (${variant})` : item.name;
     setCart((prev) => {
-      const existing = prev.find((c) => c.id === item.id);
+      const existing = prev.find((c) => c.id === cartId);
       if (existing) {
         return prev.map((c) =>
-          c.id === item.id
+          c.id === cartId
             ? { ...c, quantity: c.quantity + 1, lineTotal: (c.quantity + 1) * item.price }
             : c
         );
       }
-      return [...prev, { id: item.id, name: item.name, price: item.price, quantity: 1, lineTotal: item.price }];
+      return [
+        ...prev,
+        { id: cartId, menuItemId: item.id, name: displayName, price: item.price, quantity: 1, lineTotal: item.price },
+      ];
     });
+  };
+
+  const addToCart = (item: MenuItem) => {
+    const variants = getVariantGroup(item.name);
+    if (variants) {
+      setPendingVariantItem(item);
+      return;
+    }
+    addItemToCart(item);
   };
 
   const changeQty = (id: string, dir: number) => {
