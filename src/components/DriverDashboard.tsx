@@ -1,52 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-
-// Persistent AudioContext — unlocked on first user gesture
-let _audioCtx: AudioContext | null = null;
-function getAudioContext(): AudioContext {
-  if (!_audioCtx) {
-    _audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-  }
-  // Resume if suspended (autoplay policy)
-  if (_audioCtx.state === "suspended") {
-    _audioCtx.resume();
-  }
-  return _audioCtx;
-}
-
-// Unlock audio on first user interaction (click/touch anywhere)
-if (typeof window !== "undefined") {
-  const unlock = () => {
-    getAudioContext();
-    window.removeEventListener("click", unlock);
-    window.removeEventListener("touchstart", unlock);
-  };
-  window.addEventListener("click", unlock, { once: true });
-  window.addEventListener("touchstart", unlock, { once: true });
-}
-
-function playNotificationDing() {
-  try {
-    const ctx = getAudioContext();
-    // Play 3 quick ascending tones for an attention-grabbing ding
-    const now = ctx.currentTime;
-    for (let i = 0; i < 3; i++) {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = "sine";
-      osc.frequency.value = 880 + i * 220;
-      const t = now + i * 0.18;
-      gain.gain.setValueAtTime(0.5, t);
-      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.25);
-      osc.start(t);
-      osc.stop(t + 0.25);
-    }
-  } catch (e) {
-    // Audio not available
-  }
-}
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -54,6 +7,69 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { toast } from "@/components/ui/sonner";
+
+const OFFER_DURATION_MS = 20_000;
+const REFRESH_INTERVAL_MS = 4_000;
+
+let _audioCtx: AudioContext | null = null;
+
+function getAudioContext(): AudioContext {
+  if (!_audioCtx) {
+    _audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  }
+
+  if (_audioCtx.state === "suspended") {
+    void _audioCtx.resume();
+  }
+
+  return _audioCtx;
+}
+
+if (typeof window !== "undefined") {
+  const unlock = () => {
+    try {
+      getAudioContext();
+    } catch {
+      return;
+    }
+
+    window.removeEventListener("click", unlock);
+    window.removeEventListener("touchstart", unlock);
+    window.removeEventListener("keydown", unlock);
+  };
+
+  window.addEventListener("click", unlock, { once: true });
+  window.addEventListener("touchstart", unlock, { once: true });
+  window.addEventListener("keydown", unlock, { once: true });
+}
+
+function playNotificationDing() {
+  try {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+
+    for (let i = 0; i < 3; i++) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.value = 880 + i * 220;
+
+      const startAt = now + i * 0.18;
+      gain.gain.setValueAtTime(0.0001, startAt);
+      gain.gain.exponentialRampToValueAtTime(0.45, startAt + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.01, startAt + 0.25);
+
+      osc.start(startAt);
+      osc.stop(startAt + 0.25);
+    }
+  } catch {
+    // Ignore audio failures; toast still provides feedback.
+  }
+}
 
 interface Order {
   id: string;
@@ -64,9 +80,31 @@ interface Order {
   total: number;
   created_at: string;
   driver_id: string | null;
-  driver_name: string;
+  driver_name: string | null;
   offered_to_driver_id: string | null;
   offer_expires_at: string | null;
+}
+
+function getRemainingOfferMs(offerExpiresAt: string | null) {
+  if (!offerExpiresAt) return 0;
+  return new Date(offerExpiresAt).getTime() - Date.now();
+}
+
+function hasActiveOffer(order: Order, driverProfileId: string) {
+  return (
+    order.status === "ready" &&
+    order.offered_to_driver_id === driverProfileId &&
+    order.driver_id === null &&
+    getRemainingOfferMs(order.offer_expires_at) > 0
+  );
+}
+
+function needsOfferRepair(order: Order) {
+  return (
+    order.status === "ready" &&
+    order.driver_id === null &&
+    (!order.offered_to_driver_id || getRemainingOfferMs(order.offer_expires_at) <= 0)
+  );
 }
 
 function formatDate(ts: string) {
@@ -82,7 +120,10 @@ function OrderPopup({
   onAccept: () => void;
   onDecline: () => void;
 }) {
-  const [timeLeft, setTimeLeft] = useState(20);
+  const [timeLeft, setTimeLeft] = useState(() => {
+    const secondsLeft = Math.ceil(getRemainingOfferMs(order.offer_expires_at) / 1000);
+    return secondsLeft > 0 ? secondsLeft : OFFER_DURATION_MS / 1000;
+  });
   const [progress, setProgress] = useState(100);
 
   useEffect(() => {
@@ -90,12 +131,13 @@ function OrderPopup({
     const expiresAt = new Date(order.offer_expires_at).getTime();
 
     const interval = setInterval(() => {
-      const now = Date.now();
-      const remaining = Math.max(0, Math.ceil((expiresAt - now) / 1000));
-      setTimeLeft(remaining);
-      setProgress((remaining / 20) * 100);
+      const remainingMs = Math.max(0, expiresAt - Date.now());
+      const remainingSeconds = Math.ceil(remainingMs / 1000);
 
-      if (remaining <= 0) {
+      setTimeLeft(remainingSeconds);
+      setProgress((remainingMs / OFFER_DURATION_MS) * 100);
+
+      if (remainingMs <= 0) {
         clearInterval(interval);
         onDecline();
       }
@@ -157,51 +199,119 @@ export default function DriverDashboard({ onLogout }: { onLogout: () => void }) 
   const [isAvailable, setIsAvailable] = useState(false);
   const [offeredOrder, setOfferedOrder] = useState<Order | null>(null);
   const prevOfferedRef = useRef<string | null>(null);
+  const repairingOrdersRef = useRef<Set<string>>(new Set());
 
-  // Play ding when a new order offer arrives
   useEffect(() => {
     if (offeredOrder && offeredOrder.id !== prevOfferedRef.current) {
       playNotificationDing();
+      toast("New delivery request", {
+        description: `${offeredOrder.restaurant_name} • ${formatDate(offeredOrder.created_at)}`,
+      });
     }
+
     prevOfferedRef.current = offeredOrder?.id || null;
   }, [offeredOrder]);
 
   const fetchOrders = useCallback(async () => {
     if (!profile) return;
-    const { data } = await supabase
+
+    const { data, error } = await supabase
       .from("orders")
       .select("*")
       .or(`offered_to_driver_id.eq.${profile.id},driver_id.eq.${profile.id}`)
       .order("created_at", { ascending: false });
-    if (data) {
-      const typed = data as Order[];
-      setOrders(typed);
 
-      // Check for incoming offer
-      const offer = typed.find(
-        (o) =>
-          o.status === "ready" &&
-          o.offered_to_driver_id === profile.id &&
-          o.driver_id === null &&
-          o.offer_expires_at &&
-          new Date(o.offer_expires_at).getTime() > Date.now()
-      );
-      setOfferedOrder(offer || null);
+    if (error) {
+      console.error("Failed to load driver orders", error);
+      return;
     }
+
+    const typed = (data || []) as Order[];
+    setOrders(typed);
+    setOfferedOrder(typed.find((order) => hasActiveOffer(order, profile.id)) || null);
   }, [profile]);
 
+  const repairStaleOffers = useCallback(async () => {
+    if (!profile || !isAvailable) return;
+
+    const { data, error } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("status", "ready")
+      .is("driver_id", null)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Failed to scan ready orders", error);
+      return;
+    }
+
+    const staleOrder = (data as Order[]).find(
+      (order) => needsOfferRepair(order) && !repairingOrdersRef.current.has(order.id)
+    );
+
+    if (!staleOrder) return;
+
+    repairingOrdersRef.current.add(staleOrder.id);
+
+    const { error: invokeError } = await supabase.functions.invoke("reassign-order", {
+      body: { order_id: staleOrder.id },
+    });
+
+    repairingOrdersRef.current.delete(staleOrder.id);
+
+    if (invokeError) {
+      console.error("Failed to reassign ready order", invokeError);
+    }
+  }, [isAvailable, profile]);
+
+  const syncOrders = useCallback(async () => {
+    await repairStaleOffers();
+    await fetchOrders();
+  }, [fetchOrders, repairStaleOffers]);
+
   useEffect(() => {
-    fetchOrders();
+    void syncOrders();
+
     const channel = supabase
-      .channel("driver-orders-rt")
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => fetchOrders())
+      .channel(`driver-orders-rt-${profile?.id || "guest"}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
+        void syncOrders();
+      })
       .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchOrders]);
+  }, [profile?.id, syncOrders]);
 
-  // Load initial availability
+  useEffect(() => {
+    if (!profile || !isAvailable) return;
+
+    const intervalId = window.setInterval(() => {
+      void syncOrders();
+    }, REFRESH_INTERVAL_MS);
+
+    const handleFocus = () => {
+      void syncOrders();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void syncOrders();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [isAvailable, profile, syncOrders]);
+
   useEffect(() => {
     if (profile) {
       supabase
@@ -219,8 +329,28 @@ export default function DriverDashboard({ onLogout }: { onLogout: () => void }) 
 
   const toggleAvailability = async (val: boolean) => {
     if (!profile) return;
+
+    try {
+      getAudioContext();
+    } catch {
+      // Ignore audio prime failures.
+    }
+
     setIsAvailable(val);
-    await supabase.from("profiles").update({ is_available: val } as any).eq("id", profile.id);
+
+    const { error } = await supabase.from("profiles").update({ is_available: val } as any).eq("id", profile.id);
+
+    if (error) {
+      setIsAvailable(!val);
+      toast.error("Could not update your driver status.");
+      return;
+    }
+
+    toast.success(val ? "You’re online and ready for orders." : "You’re offline.");
+
+    if (val) {
+      void syncOrders();
+    }
   };
 
   const activeOrders = useMemo(
@@ -234,31 +364,82 @@ export default function DriverDashboard({ onLogout }: { onLogout: () => void }) 
 
   const acceptOrder = async () => {
     if (!offeredOrder || !profile) return;
-    await supabase
+
+    const { data, error } = await supabase
       .from("orders")
       .update({
         status: "out-for-delivery",
         driver_id: profile.id,
         driver_name: profile.full_name || "Driver",
+        offered_to_driver_id: null,
+        offer_expires_at: null,
       })
-      .eq("id", offeredOrder.id);
+      .eq("id", offeredOrder.id)
+      .eq("status", "ready")
+      .eq("offered_to_driver_id", profile.id)
+      .is("driver_id", null)
+      .select("id")
+      .maybeSingle();
+
+    if (error) {
+      toast.error("Could not accept this order.");
+      await fetchOrders();
+      return;
+    }
+
+    if (!data) {
+      toast.error("This order was already taken or expired.");
+      await fetchOrders();
+      return;
+    }
+
     setOfferedOrder(null);
-    fetchOrders();
+    toast.success("Order accepted.");
+    await fetchOrders();
   };
 
   const declineOrder = async () => {
     if (!offeredOrder || !profile) return;
+
+    const orderId = offeredOrder.id;
     setOfferedOrder(null);
-    // Call reassign edge function to find another driver
-    await supabase.functions.invoke("reassign-order", {
-      body: { order_id: offeredOrder.id, declined_driver_id: profile.id },
+
+    const { error } = await supabase.functions.invoke("reassign-order", {
+      body: { order_id: orderId, declined_driver_id: profile.id },
     });
-    fetchOrders();
+
+    if (error) {
+      toast.error("Could not pass this order to another driver.");
+    }
+
+    await fetchOrders();
   };
 
   const completeOrder = async (orderId: string) => {
-    await supabase.from("orders").update({ status: "delivered" }).eq("id", orderId);
-    fetchOrders();
+    if (!profile) return;
+
+    const { data, error } = await supabase
+      .from("orders")
+      .update({ status: "delivered" })
+      .eq("id", orderId)
+      .eq("driver_id", profile.id)
+      .eq("status", "out-for-delivery")
+      .select("id")
+      .maybeSingle();
+
+    if (error) {
+      toast.error("Could not mark this order as delivered.");
+      return;
+    }
+
+    if (!data) {
+      toast.error("This order is no longer active.");
+      await fetchOrders();
+      return;
+    }
+
+    toast.success("Order marked as delivered.");
+    await fetchOrders();
   };
 
   return (
