@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getFoodImage } from "@/lib/foodImages";
 import { getRestaurantLogo } from "@/lib/restaurantLogos";
-import { ShoppingCart, Plus, Minus, Search, Clock, Star, MapPin, ChevronRight, User, LogOut, Package } from "lucide-react";
+import { getVariantGroup } from "@/lib/foodVariants";
+import { ShoppingCart, Plus, Minus, Search, Clock, Star, MapPin, ChevronRight, User, LogOut, Package, X } from "lucide-react";
 
 interface Profile {
   id: string;
