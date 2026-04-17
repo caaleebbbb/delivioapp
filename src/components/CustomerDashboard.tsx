@@ -567,6 +567,42 @@ export default function CustomerDashboard() {
             </div>
           </div>
         )}
+
+        {/* Variant / flavor picker */}
+        {pendingVariantItem && (() => {
+          const group = getVariantGroup(pendingVariantItem.name);
+          if (!group) return null;
+          return (
+            <div className="fixed inset-0 z-50 bg-black/60 flex items-end md:items-center justify-center p-0 md:p-4 animate-fade-in" onClick={() => setPendingVariantItem(null)}>
+              <div className="bg-card w-full md:max-w-sm rounded-t-2xl md:rounded-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between p-4 border-b border-border">
+                  <div>
+                    <h3 className="font-extrabold">{pendingVariantItem.name}</h3>
+                    <p className="text-xs text-muted-foreground">Choose a {group.label.toLowerCase()}</p>
+                  </div>
+                  <button onClick={() => setPendingVariantItem(null)} className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="p-3 space-y-1.5 max-h-[60vh] overflow-y-auto">
+                  {group.options.map((opt) => (
+                    <button
+                      key={opt}
+                      onClick={() => {
+                        addItemToCart(pendingVariantItem, opt);
+                        setPendingVariantItem(null);
+                      }}
+                      className="w-full flex items-center justify-between px-4 py-3 rounded-xl hover:bg-muted transition-colors text-left"
+                    >
+                      <span className="font-bold text-sm">{opt}</span>
+                      <span className="text-xs font-bold text-primary">+ Add</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     );
   }
