@@ -1,0 +1,1 @@
+DROP TRIGGER IF EXISTS trg_assign_driver ON public.orders;
