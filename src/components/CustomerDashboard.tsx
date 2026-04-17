@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getFoodImage } from "@/lib/foodImages";
 import { getRestaurantLogo } from "@/lib/restaurantLogos";
-import { ShoppingCart, Plus, Minus, Search, Clock, Star, MapPin, ChevronRight, User, LogOut, Package } from "lucide-react";
+import { getVariantGroup } from "@/lib/foodVariants";
+import { ShoppingCart, Plus, Minus, Search, Clock, Star, MapPin, ChevronRight, User, LogOut, Package, X } from "lucide-react";
 
 interface Profile {
   id: string;
@@ -27,8 +28,9 @@ interface MenuItem {
 }
 
 interface CartItem {
-  id: string;
-  name: string;
+  id: string; // composite key: menuItemId or menuItemId::variant
+  menuItemId: string;
+  name: string; // includes "(Flavor)" if variant chosen
   price: number;
   quantity: number;
   lineTotal: number;
@@ -89,6 +91,7 @@ export default function CustomerDashboard() {
   const [authName, setAuthName] = useState("");
   const [authError, setAuthError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
+  const [pendingVariantItem, setPendingVariantItem] = useState<MenuItem | null>(null);
 
   const isLoggedIn = !!user && profile?.role === "customer";
 
@@ -152,18 +155,32 @@ export default function CustomerDashboard() {
     return items;
   }, [menuItems, activeCategory, searchQuery]);
 
-  const addToCart = (item: MenuItem) => {
+  const addItemToCart = (item: MenuItem, variant?: string) => {
+    const cartId = variant ? `${item.id}::${variant}` : item.id;
+    const displayName = variant ? `${item.name} (${variant})` : item.name;
     setCart((prev) => {
-      const existing = prev.find((c) => c.id === item.id);
+      const existing = prev.find((c) => c.id === cartId);
       if (existing) {
         return prev.map((c) =>
-          c.id === item.id
+          c.id === cartId
             ? { ...c, quantity: c.quantity + 1, lineTotal: (c.quantity + 1) * item.price }
             : c
         );
       }
-      return [...prev, { id: item.id, name: item.name, price: item.price, quantity: 1, lineTotal: item.price }];
+      return [
+        ...prev,
+        { id: cartId, menuItemId: item.id, name: displayName, price: item.price, quantity: 1, lineTotal: item.price },
+      ];
     });
+  };
+
+  const addToCart = (item: MenuItem) => {
+    const variants = getVariantGroup(item.name);
+    if (variants) {
+      setPendingVariantItem(item);
+      return;
+    }
+    addItemToCart(item);
   };
 
   const changeQty = (id: string, dir: number) => {
@@ -208,7 +225,7 @@ export default function CustomerDashboard() {
     await supabase.from("order_items").insert(
       cart.map((c) => ({
         order_id: order.id,
-        menu_item_id: c.id,
+        menu_item_id: c.menuItemId,
         name: c.name,
         price: c.price,
         quantity: c.quantity,
@@ -461,13 +478,21 @@ export default function CustomerDashboard() {
                       <div className="space-y-2">
                         {catItems.map((item) => {
                           const img = getFoodImage(item.name);
-                          const inCart = cart.find((c) => c.id === item.id);
+                          const hasVariants = !!getVariantGroup(item.name);
+                          // Only show inline qty stepper for plain items; variant items always reopen the picker.
+                          const inCart = !hasVariants ? cart.find((c) => c.id === item.id) : null;
+                          const variantCount = hasVariants
+                            ? cart.filter((c) => c.menuItemId === item.id).reduce((s, c) => s + c.quantity, 0)
+                            : 0;
                           return (
                             <Card key={item.id} className="overflow-hidden">
                               <div className="flex">
                                 <CardContent className="flex-1 py-3 space-y-1">
                                   <h4 className="font-bold text-sm">{item.name}</h4>
                                   {item.description && <p className="text-muted-foreground text-xs line-clamp-2">{item.description}</p>}
+                                  {hasVariants && (
+                                    <p className="text-secondary text-[11px] font-bold">Choose your {getVariantGroup(item.name)?.label.toLowerCase()}</p>
+                                  )}
                                   <div className="flex items-center justify-between pt-1">
                                     <span className="font-bold text-sm">${item.price.toFixed(2)}</span>
                                     {inCart ? (
@@ -477,8 +502,9 @@ export default function CustomerDashboard() {
                                         <button onClick={() => changeQty(item.id, 1)} className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center"><Plus className="w-3.5 h-3.5" /></button>
                                       </div>
                                     ) : (
-                                      <button onClick={() => addToCart(item)} className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/80">
-                                        <Plus className="w-4 h-4" />
+                                      <button onClick={() => addToCart(item)} className="flex items-center gap-1 px-2.5 h-7 rounded-full bg-primary text-primary-foreground hover:bg-primary/80 text-xs font-bold">
+                                        <Plus className="w-3.5 h-3.5" />
+                                        {hasVariants ? (variantCount > 0 ? `${variantCount} added` : "Choose") : ""}
                                       </button>
                                     )}
                                   </div>
@@ -541,6 +567,42 @@ export default function CustomerDashboard() {
             </div>
           </div>
         )}
+
+        {/* Variant / flavor picker */}
+        {pendingVariantItem && (() => {
+          const group = getVariantGroup(pendingVariantItem.name);
+          if (!group) return null;
+          return (
+            <div className="fixed inset-0 z-50 bg-black/60 flex items-end md:items-center justify-center p-0 md:p-4 animate-fade-in" onClick={() => setPendingVariantItem(null)}>
+              <div className="bg-card w-full md:max-w-sm rounded-t-2xl md:rounded-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between p-4 border-b border-border">
+                  <div>
+                    <h3 className="font-extrabold">{pendingVariantItem.name}</h3>
+                    <p className="text-xs text-muted-foreground">Choose a {group.label.toLowerCase()}</p>
+                  </div>
+                  <button onClick={() => setPendingVariantItem(null)} className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="p-3 space-y-1.5 max-h-[60vh] overflow-y-auto">
+                  {group.options.map((opt) => (
+                    <button
+                      key={opt}
+                      onClick={() => {
+                        addItemToCart(pendingVariantItem, opt);
+                        setPendingVariantItem(null);
+                      }}
+                      className="w-full flex items-center justify-between px-4 py-3 rounded-xl hover:bg-muted transition-colors text-left"
+                    >
+                      <span className="font-bold text-sm">{opt}</span>
+                      <span className="text-xs font-bold text-primary">+ Add</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     );
   }
