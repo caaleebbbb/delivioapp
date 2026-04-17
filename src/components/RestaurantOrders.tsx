@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "@/components/ui/sonner";
 
 interface OrderItem {
   id: string;
@@ -88,8 +89,16 @@ export default function RestaurantOrders({ onBack }: { onBack: () => void }) {
   }, [orders]);
 
   const updateStatus = async (orderId: string, status: string) => {
-    await supabase.from("orders").update({ status }).eq("id", orderId);
-    fetchOrders();
+    const { error } = await supabase.from("orders").update({ status }).eq("id", orderId);
+
+    if (error) {
+      toast.error("Could not update this order.");
+      return;
+    }
+
+    await fetchOrders();
+
+    toast.success(status === "ready" ? "Order marked ready for drivers." : "Order status updated.");
   };
 
   const actionMap: Record<string, { label: string; next: string } | null> = {
