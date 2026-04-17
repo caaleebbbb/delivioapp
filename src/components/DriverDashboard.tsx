@@ -6,10 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
 import { toast } from "@/components/ui/sonner";
 
-const OFFER_DURATION_MS = 20_000;
 const REFRESH_INTERVAL_MS = 4_000;
 
 let _audioCtx: AudioContext | null = null;
