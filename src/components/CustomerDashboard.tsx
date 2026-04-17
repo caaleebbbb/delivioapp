@@ -28,8 +28,9 @@ interface MenuItem {
 }
 
 interface CartItem {
-  id: string;
-  name: string;
+  id: string; // composite key: menuItemId or menuItemId::variant
+  menuItemId: string;
+  name: string; // includes "(Flavor)" if variant chosen
   price: number;
   quantity: number;
   lineTotal: number;
