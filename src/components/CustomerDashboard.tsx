@@ -136,9 +136,18 @@ export default function CustomerDashboard() {
       const channel = supabase.channel("customer-orders")
         .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => fetchOrders())
         .subscribe();
-      return () => { supabase.removeChannel(channel); };
+      const interval = window.setInterval(() => fetchOrders(), 5000);
+      return () => { supabase.removeChannel(channel); window.clearInterval(interval); };
     }
   }, [isLoggedIn, fetchOrders]);
+
+  // Keep the selectedOrder in sync with latest data
+  useEffect(() => {
+    if (selectedOrder) {
+      const fresh = orders.find((o) => o.id === selectedOrder.id);
+      if (fresh && JSON.stringify(fresh) !== JSON.stringify(selectedOrder)) setSelectedOrder(fresh);
+    }
+  }, [orders]);
 
   // Pre-fill name from profile
   useEffect(() => {
