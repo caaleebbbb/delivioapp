@@ -41,9 +41,13 @@ interface Order {
   restaurant_name: string;
   status: string;
   total: number;
+  tip: number;
   created_at: string;
   address: string;
   driver_name: string | null;
+  restaurant_rating: number | null;
+  driver_rating: number | null;
+  rating_comment: string | null;
 }
 
 const STATUS_STEPS = ["placed", "preparing", "ready", "out-for-delivery", "delivered"];
