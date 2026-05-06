@@ -235,6 +235,20 @@ export default function DriverDashboard({ onLogout }: { onLogout: () => void }) 
     [myOrders]
   );
 
+  const earnings = useMemo(() => {
+    const now = new Date();
+    const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const startWeek = startToday - 6 * 86400000;
+    let today = 0, week = 0, todayCount = 0, weekCount = 0;
+    for (const o of completedOrders) {
+      const t = new Date(o.created_at).getTime();
+      const earn = 5 + (Number(o.tip) || 0);
+      if (t >= startWeek) { week += earn; weekCount++; }
+      if (t >= startToday) { today += earn; todayCount++; }
+    }
+    return { today, week, todayCount, weekCount };
+  }, [completedOrders]);
+
   const acceptOrder = async (orderId: string) => {
     if (!profile) return;
 
