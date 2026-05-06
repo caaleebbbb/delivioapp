@@ -41,9 +41,13 @@ interface Order {
   restaurant_name: string;
   status: string;
   total: number;
+  tip: number;
   created_at: string;
   address: string;
   driver_name: string | null;
+  restaurant_rating: number | null;
+  driver_rating: number | null;
+  rating_comment: string | null;
 }
 
 const STATUS_STEPS = ["placed", "preparing", "ready", "out-for-delivery", "delivered"];
@@ -92,6 +96,7 @@ export default function CustomerDashboard() {
   const [authError, setAuthError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const [pendingVariantItem, setPendingVariantItem] = useState<MenuItem | null>(null);
+  const [tipPercent, setTipPercent] = useState<number>(15);
 
   const isLoggedIn = !!user && profile?.role === "customer";
 
@@ -131,9 +136,18 @@ export default function CustomerDashboard() {
       const channel = supabase.channel("customer-orders")
         .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => fetchOrders())
         .subscribe();
-      return () => { supabase.removeChannel(channel); };
+      const interval = window.setInterval(() => fetchOrders(), 5000);
+      return () => { supabase.removeChannel(channel); window.clearInterval(interval); };
     }
   }, [isLoggedIn, fetchOrders]);
+
+  // Keep the selectedOrder in sync with latest data
+  useEffect(() => {
+    if (selectedOrder) {
+      const fresh = orders.find((o) => o.id === selectedOrder.id);
+      if (fresh && JSON.stringify(fresh) !== JSON.stringify(selectedOrder)) setSelectedOrder(fresh);
+    }
+  }, [orders]);
 
   // Pre-fill name from profile
   useEffect(() => {
@@ -194,6 +208,7 @@ export default function CustomerDashboard() {
   const cartTotal = useMemo(() => cart.reduce((s, c) => s + c.lineTotal, 0), [cart]);
   const cartCount = useMemo(() => cart.reduce((s, c) => s + c.quantity, 0), [cart]);
   const deliveryFee = 2.99;
+  const tipAmount = useMemo(() => parseFloat((cartTotal * (tipPercent / 100)).toFixed(2)), [cartTotal, tipPercent]);
   const serviceFee = useMemo(() => parseFloat((cartTotal * 0.05).toFixed(2)), [cartTotal]);
 
   const placeOrder = async () => {
@@ -201,7 +216,7 @@ export default function CustomerDashboard() {
     const rest = restaurants.find((r) => r.id === selectedRestaurantId);
     if (!rest) return;
 
-    const orderTotal = parseFloat((cartTotal + deliveryFee + serviceFee).toFixed(2));
+    const orderTotal = parseFloat((cartTotal + deliveryFee + serviceFee + tipAmount).toFixed(2));
 
     const { data: order, error } = await supabase
       .from("orders")
@@ -212,6 +227,7 @@ export default function CustomerDashboard() {
         restaurant_name: rest.business_name || "Restaurant",
         address: address.trim(),
         total: orderTotal,
+        tip: tipAmount,
         status: "placed",
       })
       .select()
@@ -359,6 +375,13 @@ export default function CustomerDashboard() {
                 <p className="text-xs text-muted-foreground">Estimated delivery</p>
                 <p className="font-extrabold text-primary">{getDeliveryTime(selectedOrder.id)} min</p>
               </div>
+            )}
+
+            {selectedOrder.status === "delivered" && (
+              <RatingPanel
+                order={selectedOrder}
+                onSubmitted={(updated) => setSelectedOrder({ ...selectedOrder, ...updated })}
+              />
             )}
           </CardContent>
         </Card>
@@ -530,6 +553,7 @@ export default function CustomerDashboard() {
           <div className="hidden md:block sticky top-5">
             <CartPanel
               cart={cart} cartTotal={cartTotal} deliveryFee={deliveryFee} serviceFee={serviceFee}
+              tipPercent={tipPercent} setTipPercent={setTipPercent} tipAmount={tipAmount}
               customerName={customerName} setCustomerName={setCustomerName}
               address={address} setAddress={setAddress}
               changeQty={changeQty} placeOrder={placeOrder}
@@ -558,6 +582,7 @@ export default function CustomerDashboard() {
                 </div>
                 <CartPanel
                   cart={cart} cartTotal={cartTotal} deliveryFee={deliveryFee} serviceFee={serviceFee}
+                  tipPercent={tipPercent} setTipPercent={setTipPercent} tipAmount={tipAmount}
                   customerName={customerName} setCustomerName={setCustomerName}
                   address={address} setAddress={setAddress}
                   changeQty={changeQty} placeOrder={placeOrder}
@@ -702,6 +727,7 @@ export default function CustomerDashboard() {
 
 function CartPanel({
   cart, cartTotal, deliveryFee, serviceFee,
+  tipPercent, setTipPercent, tipAmount,
   customerName, setCustomerName,
   address, setAddress,
   changeQty, placeOrder, isLoggedIn,
@@ -710,6 +736,9 @@ function CartPanel({
   cartTotal: number;
   deliveryFee: number;
   serviceFee: number;
+  tipPercent: number;
+  setTipPercent: (n: number) => void;
+  tipAmount: number;
   customerName: string;
   setCustomerName: (v: string) => void;
   address: string;
@@ -718,7 +747,8 @@ function CartPanel({
   placeOrder: () => void;
   isLoggedIn: boolean;
 }) {
-  const grandTotal = cartTotal + deliveryFee + serviceFee;
+  const grandTotal = cartTotal + deliveryFee + serviceFee + tipAmount;
+  const tipOptions = [0, 10, 15, 20, 25];
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -745,6 +775,23 @@ function CartPanel({
               ))}
             </div>
 
+            <div className="mt-4">
+              <p className="text-xs font-bold mb-2">Driver Tip</p>
+              <div className="flex gap-1.5 flex-wrap">
+                {tipOptions.map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setTipPercent(p)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                      tipPercent === p ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    }`}
+                  >
+                    {p === 0 ? "No tip" : `${p}%`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="space-y-1 mt-4 text-sm">
               <div className="flex justify-between text-muted-foreground">
                 <span>Subtotal</span><span>${cartTotal.toFixed(2)}</span>
@@ -754,6 +801,9 @@ function CartPanel({
               </div>
               <div className="flex justify-between text-muted-foreground">
                 <span>Service fee</span><span>${serviceFee.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>Driver tip</span><span>${tipAmount.toFixed(2)}</span>
               </div>
               <div className="flex justify-between font-extrabold pt-2 border-t border-border">
                 <span>Total</span><span>${grandTotal.toFixed(2)}</span>
@@ -776,9 +826,65 @@ function CartPanel({
         </div>
 
         <Button variant="warning" className="w-full mt-3 font-extrabold" disabled={cart.length === 0 || !customerName.trim() || !address.trim()} onClick={placeOrder}>
-          Place Order — ${(cartTotal + deliveryFee + serviceFee).toFixed(2)}
+          Place Order — ${grandTotal.toFixed(2)}
         </Button>
       </CardContent>
     </Card>
+  );
+}
+
+function RatingPanel({ order, onSubmitted }: { order: Order; onSubmitted: (u: Partial<Order>) => void }) {
+  const [restRating, setRestRating] = useState<number>(order.restaurant_rating || 0);
+  const [drvRating, setDrvRating] = useState<number>(order.driver_rating || 0);
+  const [comment, setComment] = useState<string>(order.rating_comment || "");
+  const [saving, setSaving] = useState(false);
+  const submitted = !!order.restaurant_rating || !!order.driver_rating;
+
+  const submit = async () => {
+    if (restRating === 0 && drvRating === 0) return;
+    setSaving(true);
+    const updates: any = {
+      restaurant_rating: restRating || null,
+      driver_rating: drvRating || null,
+      rating_comment: comment.trim() || null,
+      rated_at: new Date().toISOString(),
+    };
+    const { error } = await supabase.from("orders").update(updates).eq("id", order.id);
+    setSaving(false);
+    if (!error) onSubmitted(updates);
+  };
+
+  if (submitted) {
+    return (
+      <div className="p-4 rounded-lg bg-success/10 border border-success/20 text-center">
+        <p className="text-sm font-bold text-success">Thanks for your feedback! ⭐</p>
+        {order.restaurant_rating && <p className="text-xs text-muted-foreground mt-1">Restaurant: {order.restaurant_rating}/5{order.driver_rating ? ` • Driver: ${order.driver_rating}/5` : ""}</p>}
+      </div>
+    );
+  }
+
+  const StarRow = ({ value, onChange, label }: { value: number; onChange: (n: number) => void; label: string }) => (
+    <div>
+      <p className="text-xs font-bold mb-1.5">{label}</p>
+      <div className="flex gap-1">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button key={n} type="button" onClick={() => onChange(n)} className="text-2xl leading-none">
+            <Star className={`w-6 h-6 ${n <= value ? "text-secondary fill-secondary" : "text-muted-foreground"}`} />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="p-4 rounded-lg bg-muted/40 border border-border space-y-3">
+      <p className="text-sm font-extrabold">How was your experience?</p>
+      <StarRow value={restRating} onChange={setRestRating} label="Rate the restaurant" />
+      {order.driver_name && <StarRow value={drvRating} onChange={setDrvRating} label={`Rate ${order.driver_name}`} />}
+      <Input value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Leave a comment (optional)" />
+      <Button variant="warning" className="w-full" disabled={saving || (restRating === 0 && drvRating === 0)} onClick={submit}>
+        {saving ? "Submitting..." : "Submit Rating"}
+      </Button>
+    </div>
   );
 }

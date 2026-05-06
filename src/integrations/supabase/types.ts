@@ -114,12 +114,17 @@ export type Database = {
           customer_name: string
           driver_id: string | null
           driver_name: string | null
+          driver_rating: number | null
           id: string
           offer_expires_at: string | null
           offered_to_driver_id: string | null
+          rated_at: string | null
+          rating_comment: string | null
           restaurant_id: string
           restaurant_name: string
+          restaurant_rating: number | null
           status: string
+          tip: number
           total: number
           updated_at: string
         }
@@ -130,12 +135,17 @@ export type Database = {
           customer_name: string
           driver_id?: string | null
           driver_name?: string | null
+          driver_rating?: number | null
           id?: string
           offer_expires_at?: string | null
           offered_to_driver_id?: string | null
+          rated_at?: string | null
+          rating_comment?: string | null
           restaurant_id: string
           restaurant_name: string
+          restaurant_rating?: number | null
           status?: string
+          tip?: number
           total?: number
           updated_at?: string
         }
@@ -146,12 +156,17 @@ export type Database = {
           customer_name?: string
           driver_id?: string | null
           driver_name?: string | null
+          driver_rating?: number | null
           id?: string
           offer_expires_at?: string | null
           offered_to_driver_id?: string | null
+          rated_at?: string | null
+          rating_comment?: string | null
           restaurant_id?: string
           restaurant_name?: string
+          restaurant_rating?: number | null
           status?: string
+          tip?: number
           total?: number
           updated_at?: string
         }

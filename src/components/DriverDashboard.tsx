@@ -76,6 +76,7 @@ interface Order {
   status: string;
   address: string;
   total: number;
+  tip: number;
   created_at: string;
   driver_id: string | null;
   driver_name: string | null;
@@ -234,6 +235,20 @@ export default function DriverDashboard({ onLogout }: { onLogout: () => void }) 
     [myOrders]
   );
 
+  const earnings = useMemo(() => {
+    const now = new Date();
+    const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const startWeek = startToday - 6 * 86400000;
+    let today = 0, week = 0, todayCount = 0, weekCount = 0;
+    for (const o of completedOrders) {
+      const t = new Date(o.created_at).getTime();
+      const earn = 5 + (Number(o.tip) || 0);
+      if (t >= startWeek) { week += earn; weekCount++; }
+      if (t >= startToday) { today += earn; todayCount++; }
+    }
+    return { today, week, todayCount, weekCount };
+  }, [completedOrders]);
+
   const acceptOrder = async (orderId: string) => {
     if (!profile) return;
 
@@ -349,6 +364,23 @@ export default function DriverDashboard({ onLogout }: { onLogout: () => void }) 
           </CardContent>
         </Card>
       </div>
+
+      <Card className="bg-gradient-to-br from-primary/10 to-secondary/10 border-primary/30">
+        <CardContent className="pt-5 pb-5">
+          <div className="flex justify-between items-center flex-wrap gap-4">
+            <div>
+              <p className="text-muted-foreground text-xs uppercase tracking-wide">Today's Earnings</p>
+              <p className="text-3xl font-extrabold text-primary">${earnings.today.toFixed(2)}</p>
+              <p className="text-xs text-muted-foreground mt-1">{earnings.todayCount} deliver{earnings.todayCount === 1 ? "y" : "ies"} • $5 base + tips</p>
+            </div>
+            <div className="text-right">
+              <p className="text-muted-foreground text-xs uppercase tracking-wide">This Week</p>
+              <p className="text-2xl font-extrabold">${earnings.week.toFixed(2)}</p>
+              <p className="text-xs text-muted-foreground mt-1">{earnings.weekCount} deliveries</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <section className="space-y-3">
         <div className="flex justify-between items-center">
