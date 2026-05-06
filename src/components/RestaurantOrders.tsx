@@ -1,10 +1,39 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/sonner";
+
+let _restAudioCtx: AudioContext | null = null;
+function getCtx(): AudioContext {
+  if (!_restAudioCtx) _restAudioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  if (_restAudioCtx.state === "suspended") void _restAudioCtx.resume();
+  return _restAudioCtx;
+}
+if (typeof window !== "undefined") {
+  const unlock = () => { try { getCtx(); } catch {} };
+  window.addEventListener("click", unlock, { once: true });
+  window.addEventListener("touchstart", unlock, { once: true });
+}
+function playNewOrderDing() {
+  try {
+    const ctx = getCtx();
+    const now = ctx.currentTime;
+    for (let i = 0; i < 2; i++) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = "sine"; osc.frequency.value = 660 + i * 220;
+      const t = now + i * 0.2;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.4, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+      osc.start(t); osc.stop(t + 0.3);
+    }
+  } catch {}
+}
 
 interface OrderItem {
   id: string;
