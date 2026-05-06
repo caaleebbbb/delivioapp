@@ -553,6 +553,7 @@ export default function CustomerDashboard() {
           <div className="hidden md:block sticky top-5">
             <CartPanel
               cart={cart} cartTotal={cartTotal} deliveryFee={deliveryFee} serviceFee={serviceFee}
+              tipPercent={tipPercent} setTipPercent={setTipPercent} tipAmount={tipAmount}
               customerName={customerName} setCustomerName={setCustomerName}
               address={address} setAddress={setAddress}
               changeQty={changeQty} placeOrder={placeOrder}
