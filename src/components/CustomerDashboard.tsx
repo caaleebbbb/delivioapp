@@ -96,6 +96,7 @@ export default function CustomerDashboard() {
   const [authError, setAuthError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const [pendingVariantItem, setPendingVariantItem] = useState<MenuItem | null>(null);
+  const [tipPercent, setTipPercent] = useState<number>(15);
 
   const isLoggedIn = !!user && profile?.role === "customer";
 
