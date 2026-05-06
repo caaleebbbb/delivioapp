@@ -199,6 +199,7 @@ export default function CustomerDashboard() {
   const cartTotal = useMemo(() => cart.reduce((s, c) => s + c.lineTotal, 0), [cart]);
   const cartCount = useMemo(() => cart.reduce((s, c) => s + c.quantity, 0), [cart]);
   const deliveryFee = 2.99;
+  const tipAmount = useMemo(() => parseFloat((cartTotal * (tipPercent / 100)).toFixed(2)), [cartTotal, tipPercent]);
   const serviceFee = useMemo(() => parseFloat((cartTotal * 0.05).toFixed(2)), [cartTotal]);
 
   const placeOrder = async () => {
