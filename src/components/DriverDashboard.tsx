@@ -365,6 +365,23 @@ export default function DriverDashboard({ onLogout }: { onLogout: () => void }) 
         </Card>
       </div>
 
+      <Card className="bg-gradient-to-br from-primary/10 to-secondary/10 border-primary/30">
+        <CardContent className="pt-5 pb-5">
+          <div className="flex justify-between items-center flex-wrap gap-4">
+            <div>
+              <p className="text-muted-foreground text-xs uppercase tracking-wide">Today's Earnings</p>
+              <p className="text-3xl font-extrabold text-primary">${earnings.today.toFixed(2)}</p>
+              <p className="text-xs text-muted-foreground mt-1">{earnings.todayCount} deliver{earnings.todayCount === 1 ? "y" : "ies"} • $5 base + tips</p>
+            </div>
+            <div className="text-right">
+              <p className="text-muted-foreground text-xs uppercase tracking-wide">This Week</p>
+              <p className="text-2xl font-extrabold">${earnings.week.toFixed(2)}</p>
+              <p className="text-xs text-muted-foreground mt-1">{earnings.weekCount} deliveries</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <section className="space-y-3">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-extrabold">Available Orders</h3>
