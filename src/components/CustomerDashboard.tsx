@@ -376,7 +376,13 @@ export default function CustomerDashboard() {
                 <p className="font-extrabold text-primary">{getDeliveryTime(selectedOrder.id)} min</p>
               </div>
             )}
-          </CardContent>
+
+            {selectedOrder.status === "delivered" && (
+              <RatingPanel
+                order={selectedOrder}
+                onSubmitted={(updated) => setSelectedOrder({ ...selectedOrder, ...updated })}
+              />
+            )}
         </Card>
       </div>
     );
