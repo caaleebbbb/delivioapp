@@ -78,6 +78,8 @@ function formatDate(ts: string) {
 export default function RestaurantOrders({ onBack }: { onBack: () => void }) {
   const { profile } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
+  const knownIdsRef = useRef<Set<string>>(new Set());
+  const initialLoadRef = useRef(true);
 
   const fetchOrders = async () => {
     if (!profile) return;
@@ -99,6 +101,15 @@ export default function RestaurantOrders({ onBack }: { onBack: () => void }) {
       })
     );
     setOrders(ordersWithItems);
+
+    // Detect new orders for sound alert
+    const newPlaced = ordersWithItems.filter(o => o.status === "placed" && !knownIdsRef.current.has(o.id));
+    if (!initialLoadRef.current && newPlaced.length > 0) {
+      playNewOrderDing();
+      toast("New order received!", { description: `${newPlaced[0].customer_name} • $${newPlaced[0].total.toFixed(2)}` });
+    }
+    knownIdsRef.current = new Set(ordersWithItems.map(o => o.id));
+    initialLoadRef.current = false;
   };
 
   useEffect(() => {
@@ -108,7 +119,8 @@ export default function RestaurantOrders({ onBack }: { onBack: () => void }) {
       { event: "*", schema: "public", table: "orders" },
       () => fetchOrders()
     ).subscribe();
-    return () => { supabase.removeChannel(channel); };
+    const interval = window.setInterval(() => fetchOrders(), 5000);
+    return () => { supabase.removeChannel(channel); window.clearInterval(interval); };
   }, [profile]);
 
   const grouped = useMemo(() => {
