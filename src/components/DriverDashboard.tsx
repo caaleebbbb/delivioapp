@@ -76,6 +76,7 @@ interface Order {
   status: string;
   address: string;
   total: number;
+  tip: number;
   created_at: string;
   driver_id: string | null;
   driver_name: string | null;
