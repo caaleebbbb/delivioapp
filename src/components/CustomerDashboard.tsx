@@ -207,7 +207,7 @@ export default function CustomerDashboard() {
     const rest = restaurants.find((r) => r.id === selectedRestaurantId);
     if (!rest) return;
 
-    const orderTotal = parseFloat((cartTotal + deliveryFee + serviceFee).toFixed(2));
+    const orderTotal = parseFloat((cartTotal + deliveryFee + serviceFee + tipAmount).toFixed(2));
 
     const { data: order, error } = await supabase
       .from("orders")
@@ -218,6 +218,7 @@ export default function CustomerDashboard() {
         restaurant_name: rest.business_name || "Restaurant",
         address: address.trim(),
         total: orderTotal,
+        tip: tipAmount,
         status: "placed",
       })
       .select()
