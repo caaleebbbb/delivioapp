@@ -383,6 +383,7 @@ export default function CustomerDashboard() {
                 onSubmitted={(updated) => setSelectedOrder({ ...selectedOrder, ...updated })}
               />
             )}
+          </CardContent>
         </Card>
       </div>
     );
